@@ -24,6 +24,7 @@ public class Principal extends JFrame {
     private EquipoP equipoP;
     private JugadorP jugadorP;
     private PartidoP partidoP;
+    private GolP golP;
     
     public Principal() {
         initializeFrame();
@@ -51,6 +52,7 @@ public class Principal extends JFrame {
         equipoP = new EquipoP(this);
         jugadorP = new JugadorP(this);
         partidoP = new PartidoP(this);
+        golP = new GolP(this);
     }
     
     private void setupPanels() {
@@ -59,7 +61,7 @@ public class Principal extends JFrame {
         mainPanel.add(equipoP, "EQUIPO");
         mainPanel.add(jugadorP, "JUGADOR");
         mainPanel.add(partidoP, "PARTIDO");
-        
+        mainPanel.add(golP, "GOL");
         add(mainPanel);
     }
     
@@ -71,21 +73,43 @@ public class Principal extends JFrame {
     public void showPresidentePanel() {
         presidenteP.cargarDatos();
         cardLayout.show(mainPanel, "PRESIDENTE");
+        
     }
     
     public void showEquipoPanel() {
-        equipoP.cargarDatos();
+        if (equipoP == null) {
+            equipoP = new EquipoP(this);
+            mainPanel.add(equipoP, "EQUIPO");
+        }
+        equipoP.recargarDatos(); 
         cardLayout.show(mainPanel, "EQUIPO");
     }
     
     public void showJugadorPanel() {
-        jugadorP.cargarDatos();
+        if (jugadorP == null) {
+            jugadorP = new JugadorP(this);
+            mainPanel.add(jugadorP, "JUGADOR");
+        }
+        jugadorP.recargarDatos(); 
         cardLayout.show(mainPanel, "JUGADOR");
     }
     
     public void showPartidoPanel() {
-        partidoP.cargarDatos();
+        if (partidoP == null) {
+            partidoP = new PartidoP(this);
+            mainPanel.add(partidoP, "PARTIDO");
+        }
+        partidoP.recargarDatos(); 
         cardLayout.show(mainPanel, "PARTIDO");
+    }
+    
+    public void showGolPanel() {
+        if (golP == null) {
+            golP = new GolP(this);
+            mainPanel.add(golP, "GOL");
+        }
+        golP.recargarDatos();
+        cardLayout.show(mainPanel, "GOL");
     }
     
     public Conexion getDbConnection() {

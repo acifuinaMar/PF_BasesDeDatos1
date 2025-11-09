@@ -4,6 +4,8 @@
  */
 package Modelo;
 
+import java.util.Date;
+
 /**
  *
  * @author maryori
@@ -17,6 +19,9 @@ public class Gol {
     private int idJugador;
     private String nombreJugador;
     private String nombreEquipo;
+    private Date fechaPartido;
+    private String equipoLocal;
+    private String equipoVisitante;
     
     public Gol() {}
     
@@ -77,6 +82,31 @@ public class Gol {
     public void setNombreEquipo(String nombreEquipo) {
         this.nombreEquipo = nombreEquipo; 
     }
+
+    public Date getFechaPartido() {
+        return fechaPartido;
+    }
+
+    public void setFechaPartido(Date fechaPartido) {
+        this.fechaPartido = fechaPartido;
+    }
+
+    public String getEquipoLocal() {
+        return equipoLocal;
+    }
+
+    public void setEquipoLocal(String equipoLocal) {
+        this.equipoLocal = equipoLocal;
+    }
+
+    public String getEquipoVisitante() {
+        return equipoVisitante;
+    }
+
+    public void setEquipoVisitante(String equipoVisitante) {
+        this.equipoVisitante = equipoVisitante;
+    }
+    
     
     @Override
     public String toString() {

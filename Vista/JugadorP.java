@@ -190,6 +190,11 @@ public class JugadorP extends JPanel {
         }).start();
     }
     
+    public void recargarDatos(){
+        cargarDatos();
+        cargarEquipos();
+    }
+    
     public void cargarDatos() {
         new Thread(() -> {
             try {
@@ -252,9 +257,17 @@ public class JugadorP extends JPanel {
         try {
             Jugador jugador = obtenerJugadorDesdeFormulario();
             if (jugador != null) {
-                // Para actualizar necesitaríamos un método en el controller
-                JOptionPane.showMessageDialog(this, "Funcionalidad de actualización en desarrollo", 
-                    "Info", JOptionPane.INFORMATION_MESSAGE);
+                jugador.setIdJugador(jugadorSeleccionadoId);
+                
+                if (jugadorC.actualizarJugador(jugador)) {
+                    JOptionPane.showMessageDialog(this, "Jugador actualizado exitosamente", 
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    cargarDatos();
+                    limpiarFormulario();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al actualizar jugador", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), 
@@ -270,13 +283,24 @@ public class JugadorP extends JPanel {
         }
         
         int confirm = JOptionPane.showConfirmDialog(this, 
-            "¿Está seguro de eliminar este jugador?", 
-            "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+            "¿Está seguro de eliminar este jugador?\nEsta acción no se puede deshacer.", 
+            "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         
         if (confirm == JOptionPane.YES_OPTION) {
-            // Para eliminar necesitaríamos un método en el controller
-            JOptionPane.showMessageDialog(this, "Funcionalidad de eliminación en desarrollo", 
-                "Info", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                if (jugadorC.eliminarJugador(jugadorSeleccionadoId)) {
+                    JOptionPane.showMessageDialog(this, "Jugador eliminado exitosamente", 
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    cargarDatos();
+                    limpiarFormulario();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al eliminar jugador", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
     

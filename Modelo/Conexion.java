@@ -15,20 +15,20 @@ import java.sql.SQLException;
 
 public class Conexion {
     private static Conexion instance;
-    private Connection connection;
-    private static final String URL = "jdbc:oracle:thin:@localhost:1521:umg";
-    private static final String USER = "system";
-    private static final String PASSWORD = "Umg$2025";
+    private static final String URL = "jdbc:oracle:thin:@localhost:1521:XE";
+    private static final String USER = "PROYECTOFINAL";
+    private static final String PASSWORD = "PROYECTOFINAL";
+    
+    static {
+        try {
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Error cargando driver Oracle", e);
+        }
+    }
     
     // Constructor privado para prevenir instanciación externa
     private Conexion() {
-        try {
-            Class.forName("oracle.jdbc.driver.OracleDriver");
-            this.connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("Conexión establecida con la base de datos");
-        } catch (ClassNotFoundException | SQLException e) {
-            System.err.println("Error al conectar con la base de datos: " + e.getMessage());
-        }
     }
     
     // Método estático para obtener la instancia única
@@ -43,28 +43,7 @@ public class Conexion {
         return instance;
     }
     
-    // Método para obtener la conexión
-    public Connection getConnection() {
-        try {
-            if (this.connection == null || this.connection.isClosed()) {
-                // Reconectar si la conexión está cerrada
-                this.connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al obtener conexión: " + e.getMessage());
-        }
-        return this.connection;
-    }
-    
-    // Método para cerrar la conexión
-    public void closeConnection() {
-        if (this.connection != null) {
-            try {
-                this.connection.close();
-                System.out.println("Conexión cerrada");
-            } catch (SQLException e) {
-                System.err.println("Error cerrando conexión: " + e.getMessage());
-            }
-        }
+    public Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 }

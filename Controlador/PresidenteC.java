@@ -11,22 +11,28 @@ public class PresidenteC {
     public List<Presidente> obtenerTodosPresidentes() {
         List<Presidente> presidentes = new ArrayList<>();
         String sql = "SELECT * FROM PRESIDENTE ORDER BY APELLIDO1, NOMBRE1";
-
+        
+        
         try (Connection conn = Conexion.getInstance().getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery()){
+           
 
-            while (rs.next()) {
-                Presidente presidente = mapearPresidenteDesdeResultSet(rs);
-                presidente.setCorreos(obtenerCorreosPresidente(conn, presidente.getIdPresidente()));
-                presidentes.add(presidente);
+                while (rs.next()) {
+                    Presidente presidente = mapearPresidenteDesdeResultSet(rs);
+                    presidente.setCorreos(obtenerCorreosPresidente(conn, presidente.getIdPresidente()));
+                    presidentes.add(presidente);
             }
         } catch (SQLException e) {
             System.err.println("Error al obtener presidentes: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            // NO cierres la conexión aquí si usas un pool de conexiones
+            // Si Conexion.getInstance() maneja un pool, déjalo que maneje el cierre
         }
         return presidentes;
     }
-
+    
     public Presidente obtenerPresidentePorId(int id) {
         Presidente presidente = null;
         String sql = "SELECT * FROM PRESIDENTE WHERE ID_PRESIDENTE = ?";
@@ -55,8 +61,8 @@ public class PresidenteC {
         // Cambia el nombre de la secuencia a la que realmente tienes en tu BD
         String sql = """
             INSERT INTO PRESIDENTE
-            (ID_PRESIDENTE, DPI, NOMBRE1, NOMBRE2, NOMBRE3, APELLIDO1, APELLIDO2, FECHA_NAC, MUNICIPIO, ANIO_ELECCION)
-            VALUES (SEQ_PRESIDENTE.NEXTVAL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (DPI, NOMBRE1, NOMBRE2, NOMBRE3, APELLIDO1, APELLIDO2, FECHA_NAC, MUNICIPIO, ANIO_ELECCION)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
         try (Connection conn = Conexion.getInstance().getConnection();
@@ -81,6 +87,7 @@ public class PresidenteC {
             }
         } catch (SQLException e) {
             System.err.println("Error al insertar presidente: " + e.getMessage());
+            e.printStackTrace();
         }
         return false;
     }
@@ -157,19 +164,23 @@ public class PresidenteC {
         List<String> correos = new ArrayList<>();
         String sql = "SELECT CORREO FROM CORREOPRESIDENTE WHERE ID_PRESIDENTE = ?";
 
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, idPresidente);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    correos.add(rs.getString("CORREO"));
-                }
-            }
-        }
-        return correos;
-    }
+        try (Connection connCorreos = Conexion.getInstance().getConnection();
+            PreparedStatement pstmt = connCorreos.prepareStatement(sql)) {
+
+           pstmt.setInt(1, idPresidente);
+           try (ResultSet rs = pstmt.executeQuery()) {
+               while (rs.next()) {
+                   correos.add(rs.getString("CORREO"));
+               }
+           }
+       } catch (SQLException e) {
+           System.err.println("Error al obtener correos: " + e.getMessage());
+       }
+       return correos;
+   }
 
     private void insertarCorreosPresidente(Connection conn, int idPresidente, List<String> correos) throws SQLException {
-        String sql = "INSERT INTO CORREOPRESIDENTE (ID_CORREO_PRES, CORREO, ID_PRESIDENTE) VALUES (SEQ_CORREOPRESIDENTE.NEXTVAL, ?, ?)";
+        String sql = "INSERT INTO CORREOPRESIDENTE (CORREO, ID_PRESIDENTE) VALUES (?, ?)";
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             for (String correo : correos) {

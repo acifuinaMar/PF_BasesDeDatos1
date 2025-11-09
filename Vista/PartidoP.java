@@ -29,9 +29,10 @@ public class PartidoP extends JPanel {
     private DefaultTableModel tableModel;
     private JComboBox<String> comboEquipoCasa, comboEquipoFuera;
     private JFormattedTextField txtFecha;
-    private JTextField txtGolesCasa, txtGolesFuera;
+    private JTextField txtGolesCasa, txtGolesFuera, txtBuscar;
     private JButton btnAgregar, btnActualizar, btnEliminar, btnBuscar, btnLimpiar, btnVolver;
     private int partidoSeleccionadoId = -1;
+    private JCheckBox chkBuscarPorFecha;
     
     public PartidoP(Principal principal) {
         this.principal = principal;
@@ -40,6 +41,7 @@ public class PartidoP extends JPanel {
         initializePanel();
         setupComponents();
         setupEvents();
+        cargarDatos();
     }
     
     private void initializePanel() {
@@ -110,6 +112,19 @@ public class PartidoP extends JPanel {
         panel.setBorder(BorderFactory.createTitledBorder("Lista de Partidos"));
         panel.setBackground(Color.WHITE);
         
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        searchPanel.setBackground(Color.WHITE);
+        
+        searchPanel.add(new JLabel("Buscar:"));
+        txtBuscar = new JTextField(15);
+        searchPanel.add(txtBuscar);
+        
+        chkBuscarPorFecha = new JCheckBox("Por fecha (YYYY-MM-DD)");
+        searchPanel.add(chkBuscarPorFecha);
+        
+        btnBuscar = new JButton("Buscar");
+        searchPanel.add(btnBuscar);
+        
         String[] columnNames = {"ID", "Fecha", "Equipo Local", "Goles", "Equipo Visitante", "Goles", "Resultado"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -167,6 +182,19 @@ public class PartidoP extends JPanel {
         txtGolesFuera.addActionListener(actualizarResultado);
     }
     
+    private void validarEquiposDiferentes() {
+        if (comboEquipoCasa.getSelectedIndex() > 0 && comboEquipoFuera.getSelectedIndex() > 0) {
+            String equipoCasa = comboEquipoCasa.getSelectedItem().toString();
+            String equipoFuera = comboEquipoFuera.getSelectedItem().toString();
+            
+            if (equipoCasa.equals(equipoFuera)) {
+                JOptionPane.showMessageDialog(this, 
+                    "No puede seleccionar el mismo equipo como local y visitante", 
+                    "Validación", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+    }
+    
     private void cargarEquipos() {
         new Thread(() -> {
             try {
@@ -185,6 +213,11 @@ public class PartidoP extends JPanel {
                 ex.printStackTrace();
             }
         }).start();
+    }
+    
+    public void recargarDatos(){
+        cargarDatos();
+        cargarEquipos();
     }
     
     public void cargarDatos() {
@@ -213,6 +246,26 @@ public class PartidoP extends JPanel {
                 });
             }
         }).start();
+    }
+    
+    private void actualizarTabla(List<Partido> partidos) {
+        tableModel.setRowCount(0);
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        
+        for (Partido partido : partidos) {
+            String resultado = partido.getGolesCasa() + " - " + partido.getGolesFuera();
+            
+            Object[] row = {
+                partido.getIdPartido(),
+                sdf.format(partido.getFecha()),
+                partido.getNombreEquipoCasa(),
+                partido.getGolesCasa(),
+                partido.getGolesFuera(),
+                partido.getNombreEquipoFuera(),
+                resultado
+            };
+            tableModel.addRow(row);
+        }
     }
     
     private void agregarPartido() {
@@ -246,8 +299,16 @@ public class PartidoP extends JPanel {
             Partido partido = obtenerPartidoDesdeFormulario();
             if (partido != null) {
                 partido.setIdPartido(partidoSeleccionadoId);
-                JOptionPane.showMessageDialog(this, "Funcionalidad de actualización en desarrollo", 
-                    "Info", JOptionPane.INFORMATION_MESSAGE);
+                
+                if (partidoC.actualizarPartido(partido)) {
+                    JOptionPane.showMessageDialog(this, "Partido actualizado exitosamente", 
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    cargarDatos();
+                    limpiarFormulario();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al actualizar partido", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), 
@@ -263,46 +324,67 @@ public class PartidoP extends JPanel {
         }
         
         int confirm = JOptionPane.showConfirmDialog(this, 
-            "¿Está seguro de eliminar este partido?", 
-            "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+            "¿Está seguro de eliminar este partido?\nEsta acción eliminará también los goles asociados.", 
+            "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         
         if (confirm == JOptionPane.YES_OPTION) {
-            JOptionPane.showMessageDialog(this, "Funcionalidad de eliminación en desarrollo", 
-                "Info", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                if (partidoC.eliminarPartido(partidoSeleccionadoId)) {
+                    JOptionPane.showMessageDialog(this, "Partido eliminado exitosamente", 
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    cargarDatos();
+                    limpiarFormulario();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al eliminar partido", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
     
     private void buscarPartido() {
-        String fechaStr = JOptionPane.showInputDialog(this, "Ingrese la fecha a buscar (dd/MM/yyyy):");
-        if (fechaStr != null && !fechaStr.trim().isEmpty()) {
-            new Thread(() -> {
-                try {
-                    List<Partido> partidos = partidoC.obtenerTodosPartidos();
-                    SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-                    Date fechaBusqueda = sdf.parse(fechaStr.trim());
-                    
-                    for (Partido partido : partidos) {
-                        if (sdf.format(partido.getFecha()).equals(sdf.format(fechaBusqueda))) {
-                            SwingUtilities.invokeLater(() -> {
-                                llenarFormulario(partido);
-                                JOptionPane.showMessageDialog(this, "Partido encontrado", 
-                                    "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                            });
-                            return;
-                        }
-                    }
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(this, "No se encontró partido en esa fecha", 
-                            "Búsqueda", JOptionPane.INFORMATION_MESSAGE);
-                    });
-                } catch (Exception ex) {
-                    SwingUtilities.invokeLater(() -> {
-                        JOptionPane.showMessageDialog(this, "Error en búsqueda: " + ex.getMessage(), 
-                            "Error", JOptionPane.ERROR_MESSAGE);
-                    });
-                }
-            }).start();
+        String busqueda = txtBuscar.getText().trim();
+        if (busqueda.isEmpty()) {
+            cargarDatos(); // Si está vacío, cargar todos
+            return;
         }
+        new Thread(() -> {
+            try {
+                List<Partido> partidos;
+                
+                if (chkBuscarPorFecha.isSelected()) {
+                    // Buscar por fecha
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                    Date fecha = sdf.parse(busqueda);
+                    partidos = partidoC.buscarPartidosPorFecha((java.sql.Date) fecha);
+                } else {
+                    // Buscar por nombre de equipo
+                    partidos = partidoC.buscarPartidosPorEquipo(busqueda);
+                }
+                
+                SwingUtilities.invokeLater(() -> {
+                    if (partidos.isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "No se encontraron partidos", 
+                            "Búsqueda", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                    actualizarTabla(partidos);
+                });
+            } catch (java.text.ParseException ex) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this, "Formato de fecha inválido. Use YYYY-MM-DD", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                });
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this, "Error en búsqueda: " + ex.getMessage(), 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }).start();
+        
     }
     
     private void seleccionarPartido() {

@@ -173,24 +173,17 @@ public class EquipoP extends JPanel {
         }).start();
     }
     
+    public void recargarDatos(){
+        cargarDatos();
+        cargarPresidentes();
+    }
+    
     public void cargarDatos() {
         new Thread(() -> {
             try {
                 List<Equipo> equipos = equipoC.obtenerTodosEquipos();
                 SwingUtilities.invokeLater(() -> {
-                    tableModel.setRowCount(0);
-                    for (Equipo equipo : equipos) {
-                        Object[] row = {
-                            equipo.getIdEquipo(),
-                            equipo.getNombre(),
-                            equipo.getEstadio(),
-                            equipo.getAforo(),
-                            equipo.getFundacion(),
-                            equipo.getDepartamento(),
-                            equipo.getNombrePresidente()
-                        };
-                        tableModel.addRow(row);
-                    }
+                    actualizarTabla(equipos);
                 });
             } catch (Exception ex) {
                 SwingUtilities.invokeLater(() -> {
@@ -199,6 +192,22 @@ public class EquipoP extends JPanel {
                 });
             }
         }).start();
+    }
+    
+    private void actualizarTabla(List<Equipo> equipos) {
+        tableModel.setRowCount(0);
+        for (Equipo equipo : equipos) {
+            Object[] row = {
+                equipo.getIdEquipo(),
+                equipo.getNombre(),
+                equipo.getEstadio(),
+                equipo.getAforo(),
+                equipo.getFundacion(),
+                equipo.getDepartamento(),
+                equipo.getNombrePresidente() != null ? equipo.getNombrePresidente() : "Sin presidente"
+            };
+            tableModel.addRow(row);
+        }
     }
     
     private void agregarEquipo() {
@@ -219,9 +228,31 @@ public class EquipoP extends JPanel {
     }
     
     private void actualizarEquipo() {
-        // Similar a agregar pero con actualización
-        JOptionPane.showMessageDialog(this, "Funcionalidad en desarrollo", 
-            "Info", JOptionPane.INFORMATION_MESSAGE);
+        if (equipoSeleccionadoId == -1) {
+            JOptionPane.showMessageDialog(this, "Seleccione un equipo para actualizar", 
+                "Advertencia", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        try {
+            Equipo equipo = obtenerEquipoDesdeFormulario();
+            if (equipo != null) {
+                equipo.setIdEquipo(equipoSeleccionadoId);
+                
+                if (equipoC.actualizarEquipo(equipo)) {
+                    JOptionPane.showMessageDialog(this, "Equipo actualizado exitosamente", 
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    cargarDatos();
+                    limpiarFormulario();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al actualizar equipo", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
     
     private void eliminarEquipo() {
@@ -232,21 +263,47 @@ public class EquipoP extends JPanel {
         }
         
         int confirm = JOptionPane.showConfirmDialog(this, 
-            "¿Está seguro de eliminar este equipo?", 
-            "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+            "¿Está seguro de eliminar este equipo?\nEsta acción no se puede deshacer.", 
+            "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         
         if (confirm == JOptionPane.YES_OPTION) {
-            JOptionPane.showMessageDialog(this, "Funcionalidad en desarrollo", 
-                "Info", JOptionPane.INFORMATION_MESSAGE);
+            try {
+                if (equipoC.eliminarEquipo(equipoSeleccionadoId)) {
+                    JOptionPane.showMessageDialog(this, "Equipo eliminado exitosamente", 
+                        "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    cargarDatos();
+                    limpiarFormulario();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al eliminar equipo", 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
     
     private void buscarEquipo() {
         String nombre = JOptionPane.showInputDialog(this, "Ingrese el nombre del equipo a buscar:");
         if (nombre != null && !nombre.trim().isEmpty()) {
-            // Implementar búsqueda
-            JOptionPane.showMessageDialog(this, "Funcionalidad en desarrollo", 
-                "Info", JOptionPane.INFORMATION_MESSAGE);
+            new Thread(() -> {
+            try {
+                List<Equipo> equipos = equipoC.buscarEquiposPorNombre(nombre);
+                SwingUtilities.invokeLater(() -> {
+                    if (equipos.isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "No se encontraron equipos con ese nombre", 
+                            "Búsqueda", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                    actualizarTabla(equipos);
+                });
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(this, "Error en búsqueda: " + ex.getMessage(), 
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                });
+            }
+        }).start();
         }
     }
     
@@ -296,7 +353,17 @@ public class EquipoP extends JPanel {
         txtAforo.setText(tableModel.getValueAt(row, 3).toString());
         txtFundacion.setText(tableModel.getValueAt(row, 4).toString());
         comboDepartamento.setSelectedItem(tableModel.getValueAt(row, 5).toString());
-        // comboPresidente se mantiene como está por simplicidad
+        
+        // Buscar y seleccionar el presidente correcto en el combo
+        String presidenteTabla = tableModel.getValueAt(row, 6).toString();
+        for (int i = 0; i < comboPresidente.getItemCount(); i++) {
+            String item = comboPresidente.getItemAt(i);
+            if (item.contains(presidenteTabla) || 
+                (presidenteTabla.equals("Sin presidente") && item.startsWith("0 - "))) {
+                comboPresidente.setSelectedIndex(i);
+                break;
+            }
+        }
     }
     
     private void limpiarFormulario() {

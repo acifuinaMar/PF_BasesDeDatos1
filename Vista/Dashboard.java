@@ -9,25 +9,22 @@ package Vista;
  * @author maryori
  */
 
-import Modelo.Conexion;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.sql.SQLException;
 
 public class Dashboard extends JPanel {
     private Principal principal;
     private JLabel estadoConexionLabel;
-    private JButton conectarBtn;
-    private JButton desconectarBtn;
+    //private JButton conectarBtn;
+    //private JButton desconectarBtn;
     
     public Dashboard (Principal principal) {
         this.principal = principal;
         initializePanel();
         setupComponents();
         setupEvents();
-        actualizarEstadoConexion();
+        //actualizarEstadoConexion();
     }
     
     private void initializePanel() {
@@ -44,13 +41,10 @@ public class Dashboard extends JPanel {
         estadoConexionLabel = new JLabel("Estado: Verificando...");
         estadoConexionLabel.setFont(new Font("Arial", Font.BOLD, 16));
         
-        conectarBtn = new JButton("Conectar BD");
-        desconectarBtn = new JButton("Desconectar BD");
         
         topPanel.add(estadoConexionLabel);
         topPanel.add(Box.createHorizontalStrut(20));
-        topPanel.add(conectarBtn);
-        topPanel.add(desconectarBtn);
+        
         
         // Panel central con botones de gestión
         JPanel centerPanel = new JPanel(new GridLayout(2, 2, 20, 20));
@@ -61,24 +55,26 @@ public class Dashboard extends JPanel {
         JButton equipoBtn = createMenuButton("Gestión de Equipos", "⚽", Color.GREEN);
         JButton jugadorBtn = createMenuButton("Gestión de Jugadores", "👤", Color.ORANGE);
         JButton partidoBtn = createMenuButton("Gestión de Partidos", "📅", Color.RED);
-        
+        JButton golBtn = createMenuButton("Gestión de Goles" , "🏆", Color.CYAN);
         centerPanel.add(presidenteBtn);
         centerPanel.add(equipoBtn);
         centerPanel.add(jugadorBtn);
         centerPanel.add(partidoBtn);
+        centerPanel.add(golBtn);
         
         // Configurar eventos de botones
         presidenteBtn.addActionListener(e -> principal.showPresidentePanel());
         equipoBtn.addActionListener(e -> principal.showEquipoPanel());
         jugadorBtn.addActionListener(e -> principal.showJugadorPanel());
         partidoBtn.addActionListener(e -> principal.showPartidoPanel());
+        golBtn.addActionListener(e -> principal.showGolPanel());
         
         add(topPanel, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
     }
     
     private void setupEvents() {
-        conectarBtn.addActionListener(new ActionListener() {
+        /*conectarBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 conectarBaseDatos();
@@ -90,7 +86,7 @@ public class Dashboard extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 desconectarBaseDatos();
             }
-        });
+        });*/
     }
     
     private JButton createMenuButton(String text, String emoji, Color color) {
@@ -112,23 +108,23 @@ public class Dashboard extends JPanel {
                     !principal.getDbConnection().getConnection().isClosed()) {
                     estadoConexionLabel.setText("Estado: CONECTADO");
                     estadoConexionLabel.setForeground(Color.GREEN.darker());
-                    conectarBtn.setEnabled(false);
-                    desconectarBtn.setEnabled(true);
+                    //conectarBtn.setEnabled(false);
+                    //desconectarBtn.setEnabled(true);
                 } else {
                     estadoConexionLabel.setText("Estado: DESCONECTADO");
                     estadoConexionLabel.setForeground(Color.RED);
-                    conectarBtn.setEnabled(true);
-                    desconectarBtn.setEnabled(false);
+                    //conectarBtn.setEnabled(true);
+                    //desconectarBtn.setEnabled(false);
                 }
             } catch (SQLException ex) {
                 estadoConexionLabel.setText("Estado: ERROR");
                 estadoConexionLabel.setForeground(Color.RED);
-                conectarBtn.setEnabled(true);
-                desconectarBtn.setEnabled(false);
+                //conectarBtn.setEnabled(true);
+                //desconectarBtn.setEnabled(false);
             }
         });
     }
-    
+    /*
     private void conectarBaseDatos() {
         try {
             // Forzar nueva conexión
@@ -148,5 +144,5 @@ public class Dashboard extends JPanel {
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error al desconectar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
-    }
+    }*/
 }

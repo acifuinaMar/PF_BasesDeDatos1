@@ -39,7 +39,7 @@ public class EquipoC {
             return false;
         }
         
-        String sql = "INSERT INTO equipo (id_equipo, nombre, estadio, aforo, fundacion, departamento, id_presidente) VALUES (seq_equipo.NEXTVAL, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO equipo (nombre, estadio, aforo, fundacion, departamento, id_presidente) VALUES (?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = Conexion.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, new String[]{"id_equipo"})) {
@@ -63,6 +63,55 @@ public class EquipoC {
             }
         } catch (SQLException e) {
             System.err.println("Error al insertar equipo: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public boolean actualizarEquipo(Equipo equipo){
+        if (!validarDatosEquipo(equipo)) return false;
+        String sql = """
+            UPDATE EQUIPO
+            SET NOMBRE=?, ESTADIO=?, AFORO=?, FUNDACION=?, DEPARTAMENTO=?, ID_PRESIDENTE=?
+            WHERE ID_EQUIPO=?
+            """;
+        
+        try (Connection conn = Conexion.getInstance().getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, equipo.getNombre());
+            pstmt.setString(2, equipo.getEstadio());
+            pstmt.setInt(3, equipo.getAforo());
+            pstmt.setInt(4, equipo.getFundacion());
+            pstmt.setString(5, equipo.getDepartamento());
+            
+            if (equipo.getIdPresidente() > 0) {
+                pstmt.setInt(6, equipo.getIdPresidente());
+            } else {
+                pstmt.setNull(6, java.sql.Types.INTEGER);
+            }
+            
+            pstmt.setInt(7, equipo.getIdEquipo());
+            
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Error al actualizar equipo: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    public boolean eliminarEquipo(int id) {
+        String sql = "DELETE FROM EQUIPO WHERE ID_EQUIPO = ?";
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error al eliminar equipo: " + e.getMessage());
         }
         return false;
     }
@@ -98,9 +147,43 @@ public class EquipoC {
         equipo.setDepartamento(rs.getString("departamento"));
         equipo.setIdPresidente(rs.getInt("id_presidente"));
         equipo.setNombrePresidente(rs.getString("nombre_presidente"));
+        
+        int idPresidente = rs.getInt("id_presidente");
+        if (!rs.wasNull()) {
+            equipo.setIdPresidente(idPresidente);
+        } else {
+            equipo.setIdPresidente(0);
+        }
+        
+        equipo.setNombrePresidente(rs.getString("nombre_presidente"));
+        
         return equipo;
     }
-    
+   
+        public List<Equipo> buscarEquiposPorNombre(String nombre) {
+        List<Equipo> equipos = new ArrayList<>();
+        String sql = "SELECT e.*, p.nombre1 || ' ' || p.apellido1 as nombre_presidente " +
+                     "FROM equipo e LEFT JOIN presidente p ON e.id_presidente = p.id_presidente " +
+                     "WHERE UPPER(e.nombre) LIKE UPPER(?) " +
+                     "ORDER BY e.nombre";
+        
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, "%" + nombre + "%");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Equipo equipo = mapearEquipoDesdeResultSet(rs);
+                    equipos.add(equipo);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al buscar equipos por nombre: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return equipos;
+    }
+        
     private boolean validarDatosEquipo(Equipo equipo) {
         if (equipo.getNombre() == null || equipo.getNombre().trim().isEmpty()) {
             System.err.println("Error: El nombre del equipo es obligatorio");

@@ -43,7 +43,7 @@ public class JugadorC{
             return false;
         }
         
-        String sql = "INSERT INTO jugador (id_jugador, nombre1, nombre2, nombre3, apellido1, apellido2, municipio, fecha_nac, posicion, id_equipo) VALUES (seq_jugador.NEXTVAL, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO jugador ( nombre1, nombre2, nombre3, apellido1, apellido2, municipio, fecha_nac, posicion, id_equipo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = Conexion.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, new String[]{"id_jugador"})) {
@@ -72,16 +72,117 @@ public class JugadorC{
         return false;
     }
     
-    public List<Jugador> obtenerJugadoresPorEquipo(int idEquipo) {
-        List<Jugador> jugadores = new ArrayList<>();
-        String sql = "SELECT j.*, e.nombre as nombre_equipo FROM jugador j " +
-                    "LEFT JOIN equipo e ON j.id_equipo = e.id_equipo " +
-                    "WHERE j.id_equipo = ? ORDER BY j.apellido1, j.nombre1";
+    public Jugador obtenerJugadorPorId(int id) {
+        Jugador jugador = null;
+        String sql = """
+            SELECT j.*, e.nombre as nombre_equipo,
+                   j.nombre1 || ' ' || j.apellido1 as nombre_completo
+            FROM jugador j 
+            LEFT JOIN equipo e ON j.id_equipo = e.id_equipo 
+            WHERE j.id_jugador = ?
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    jugador = mapearJugadorDesdeResultSet(rs);
+                    jugador.setCorreos(obtenerCorreosJugador(conn, id));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener jugador: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return jugador;
+    }
+    
+    // En JugadorC.java, agrega este método:
+public List<Jugador> buscarJugadoresPorEquipo(int idEquipo) {
+    List<Jugador> jugadoresFiltrados = new ArrayList<>();
+    String sql = "SELECT * FROM jugador WHERE id_equipo = ? ORDER BY apellido1, nombre1";
+    
+    try (Connection conn = Conexion.getInstance().getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
         
+        pstmt.setInt(1, idEquipo);
+        try (ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                Jugador jugador = mapearJugadorDesdeResultSet(rs);
+                jugadoresFiltrados.add(jugador);
+            }
+        }
+    } catch (SQLException e) {
+        System.err.println("Error al buscar jugadores por equipo: " + e.getMessage());
+        e.printStackTrace();
+    }
+    return jugadoresFiltrados;
+}
+    
+    public boolean actualizarJugador(Jugador jugador) {
+        if (!validarDatosJugador(jugador)) {
+            return false;
+        }
+
+        String sql = """
+            UPDATE jugador 
+            SET nombre1=?, nombre2=?, nombre3=?, apellido1=?, apellido2=?, 
+                municipio=?, fecha_nac=?, posicion=?, id_equipo=?
+            WHERE id_jugador=?
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            establecerParametrosJugador(pstmt, jugador);
+            pstmt.setInt(10, jugador.getIdJugador());
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                actualizarCorreosJugador(conn, jugador.getIdJugador(), jugador.getCorreos());
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al actualizar jugador: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean eliminarJugador(int id) {
+        String sql = "DELETE FROM jugador WHERE id_jugador = ?";
+
         try (Connection conn = Conexion.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setInt(1, idEquipo);
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error al eliminar jugador: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public List<Jugador> buscarJugadoresPorNombre(String nombre) {
+        List<Jugador> jugadores = new ArrayList<>();
+        String sql = """
+            SELECT j.*, e.nombre as nombre_equipo,
+                   j.nombre1 || ' ' || j.apellido1 as nombre_completo
+            FROM jugador j 
+            LEFT JOIN equipo e ON j.id_equipo = e.id_equipo 
+            WHERE UPPER(j.nombre1) LIKE UPPER(?) OR UPPER(j.apellido1) LIKE UPPER(?)
+            ORDER BY j.apellido1, j.nombre1
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, "%" + nombre + "%");
+            pstmt.setString(2, "%" + nombre + "%");
+            
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     Jugador jugador = mapearJugadorDesdeResultSet(rs);
@@ -90,7 +191,8 @@ public class JugadorC{
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al obtener jugadores por equipo: " + e.getMessage());
+            System.err.println("Error al buscar jugadores: " + e.getMessage());
+            e.printStackTrace();
         }
         return jugadores;
     }
@@ -126,7 +228,7 @@ public class JugadorC{
     
     private List<String> obtenerCorreosJugador(Connection conn, int idJugador) throws SQLException {
         List<String> correos = new ArrayList<>();
-        String sql = "SELECT correo FROM correo_jugador WHERE id_jugador = ?";
+        String sql = "SELECT correo FROM CORREOJUGADOR WHERE id_jugador = ?";
         
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, idJugador);
@@ -140,14 +242,14 @@ public class JugadorC{
     }
     
     private void insertarCorreosJugador(Connection conn, int idJugador, List<String> correos) throws SQLException {
-        String sql = "INSERT INTO correo_jugador (id_correo_jug, correo, id_jugador) " +
-                    "VALUES (seq_correo_jugador.NEXTVAL, ?, ?)";
+        String sql = "INSERT INTO CORREOJUGADOR (id_jugador, correo) " +
+                    "VALUES (?, ?)";
         
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             for (String correo : correos) {
                 if (correo != null && !correo.trim().isEmpty()) {
-                    pstmt.setString(1, correo.trim());
-                    pstmt.setInt(2, idJugador);
+                    pstmt.setInt(1, idJugador);
+                    pstmt.setString(2, correo.trim());
                     pstmt.addBatch();
                 }
             }
@@ -155,6 +257,15 @@ public class JugadorC{
         }
     }
     
+    private void actualizarCorreosJugador(Connection conn, int idJugador, List<String> correos) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM CORREOJUGADOR WHERE id_jugador = ?")) {
+            pstmt.setInt(1, idJugador);
+            pstmt.executeUpdate();
+        }
+        if (correos != null && !correos.isEmpty()) {
+            insertarCorreosJugador(conn, idJugador, correos);
+        }
+    }
     private boolean validarDatosJugador(Jugador jugador) {
         if (jugador.getNombre1() == null || jugador.getNombre1().trim().isEmpty()) {
             System.err.println("Error: El primer nombre es obligatorio");
@@ -190,5 +301,32 @@ public class JugadorC{
         int añoNacimiento = cal.get(java.util.Calendar.YEAR);
         
         return (añoActual - añoNacimiento) >= 16;
+    }
+    
+    public List<Jugador> obtenerJugadoresParaCombo() {
+        List<Jugador> jugadores = new ArrayList<>();
+        String sql = """
+            SELECT j.id_jugador, j.nombre1, j.apellido1, e.nombre as equipo
+            FROM jugador j
+            JOIN equipo e ON j.id_equipo = e.id_equipo
+            ORDER BY j.apellido1, j.nombre1
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                Jugador jugador = new Jugador();
+                jugador.setIdJugador(rs.getInt("id_jugador"));
+                jugador.setNombre1(rs.getString("nombre1"));
+                jugador.setApellido1(rs.getString("apellido1"));
+                jugador.setNombreEquipo(rs.getString("equipo"));
+                jugadores.add(jugador);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener jugadores para combo: " + e.getMessage());
+        }
+        return jugadores;
     }
 }

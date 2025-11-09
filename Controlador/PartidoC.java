@@ -41,8 +41,8 @@ public class PartidoC{
             return false;
         }
         
-        String sql = "INSERT INTO partido (id_partido, fecha, goles_casa, goles_fuera, id_equipo_casa, id_equipo_fuera) " +
-                    "VALUES (seq_partido.NEXTVAL, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO partido (fecha, goles_casa, goles_fuera, id_equipo_casa, id_equipo_fuera) " +
+                    "VALUES (?, ?, ?, ?, ?)";
         
         try (Connection conn = Conexion.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, new String[]{"id_partido"})) {
@@ -69,16 +69,99 @@ public class PartidoC{
         return false;
     }
     
-    public List<Partido> obtenerPartidosPorEquipo(int idEquipo) {
-        List<Partido> partidos = new ArrayList<>();
-        String sql = "SELECT p.*, ec.nombre as equipo_casa, ef.nombre as equipo_fuera FROM partido p JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo " +
-                    "JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo WHERE p.id_equipo_casa = ? OR p.id_equipo_fuera = ? ORDER BY p.fecha DESC";
-        
+    public Partido obtenerPartidoPorId(int id) {
+        Partido partido = null;
+        String sql = """
+            SELECT p.*, 
+                   ec.nombre as equipo_casa_nombre,
+                   ef.nombre as equipo_fuera_nombre
+            FROM partido p
+            LEFT JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo
+            LEFT JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo
+            WHERE p.id_partido = ?
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    partido = mapearPartidoDesdeResultSet(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener partido: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return partido;
+    }
+
+    public boolean actualizarPartido(Partido partido) {
+        if (!validarDatosPartido(partido)) {
+            return false;
+        }
+
+        String sql = """
+            UPDATE partido 
+            SET fecha=?, goles_casa=?, goles_fuera=?, id_equipo_casa=?, id_equipo_fuera=?
+            WHERE id_partido=?
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setTimestamp(1, new java.sql.Timestamp(partido.getFecha().getTime()));
+            pstmt.setInt(2, partido.getGolesCasa());
+            pstmt.setInt(3, partido.getGolesFuera());
+            pstmt.setInt(4, partido.getIdEquipoCasa());
+            pstmt.setInt(5, partido.getIdEquipoFuera());
+            pstmt.setInt(6, partido.getIdPartido());
+
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+            
+        } catch (SQLException e) {
+            System.err.println("Error al actualizar partido: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean eliminarPartido(int id) {
+        String sql = "DELETE FROM partido WHERE id_partido = ?";
+
         try (Connection conn = Conexion.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
-            pstmt.setInt(1, idEquipo);
-            pstmt.setInt(2, idEquipo);
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Error al eliminar partido: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public List<Partido> buscarPartidosPorEquipo(String nombreEquipo) {
+        List<Partido> partidos = new ArrayList<>();
+        String sql = """
+            SELECT p.*, 
+                   ec.nombre as equipo_casa_nombre,
+                   ef.nombre as equipo_fuera_nombre
+            FROM partido p
+            LEFT JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo
+            LEFT JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo
+            WHERE UPPER(ec.nombre) LIKE UPPER(?) OR UPPER(ef.nombre) LIKE UPPER(?)
+            ORDER BY p.fecha DESC
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, "%" + nombreEquipo + "%");
+            pstmt.setString(2, "%" + nombreEquipo + "%");
+            
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     Partido partido = mapearPartidoDesdeResultSet(rs);
@@ -86,7 +169,39 @@ public class PartidoC{
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error al obtener partidos por equipo: " + e.getMessage());
+            System.err.println("Error al buscar partidos: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return partidos;
+    }
+
+    public List<Partido> buscarPartidosPorFecha(Date fecha) {
+        List<Partido> partidos = new ArrayList<>();
+        String sql = """
+            SELECT p.*, 
+                   ec.nombre as equipo_casa_nombre,
+                   ef.nombre as equipo_fuera_nombre
+            FROM partido p
+            LEFT JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo
+            LEFT JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo
+            WHERE TRUNC(p.fecha) = TRUNC(?)
+            ORDER BY p.fecha DESC
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setDate(1, new java.sql.Date(fecha.getTime()));
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Partido partido = mapearPartidoDesdeResultSet(rs);
+                    partidos.add(partido);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al buscar partidos por fecha: " + e.getMessage());
+            e.printStackTrace();
         }
         return partidos;
     }
@@ -117,5 +232,35 @@ public class PartidoC{
         }
         
         return true;
+    }
+
+    public List<Partido> obtenerPartidosParaCombo() {
+        List<Partido> partidos = new ArrayList<>();
+        String sql = """
+            SELECT p.id_partido, p.fecha, 
+                   ec.nombre as equipo_casa, 
+                   ef.nombre as equipo_fuera
+            FROM partido p
+            JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo
+            JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo
+            ORDER BY p.fecha DESC
+            """;
+
+        try (Connection conn = Conexion.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                Partido partido = new Partido();
+                partido.setIdPartido(rs.getInt("id_partido"));
+                partido.setFecha(rs.getTimestamp("fecha"));
+                partido.setNombreEquipoCasa(rs.getString("equipo_casa"));
+                partido.setNombreEquipoFuera(rs.getString("equipo_fuera"));
+                partidos.add(partido);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener partidos para combo: " + e.getMessage());
+        }
+        return partidos;
     }
 }
