@@ -16,9 +16,9 @@ import java.sql.SQLException;
 public class Conexion {
     private static Conexion instance;
     private Connection connection;
-    private static final String URL = "jdbc:oracle:thin:@localhost:1521:XE";
-    private static final String USER = "liga_futbol";
-    private static final String PASSWORD = "*****";
+    private static final String URL = "jdbc:oracle:thin:@localhost:1521:umg";
+    private static final String USER = "system";
+    private static final String PASSWORD = "Umg$2025";
     
     // Constructor privado para prevenir instanciación externa
     private Conexion() {

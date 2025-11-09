@@ -116,7 +116,7 @@ public class PresidenteP extends JPanel {
         panel.setBackground(Color.WHITE);
         
         // Modelo de tabla
-        String[] columnNames = {"ID", "DPI", "Nombre", "Apellidos", "Fecha Nac", "Municipio", "Año Elección"};
+        String[] columnNames = {"ID", "DPI", "Nombre", "Apellidos", "Fecha Nac", "Municipio", "Año Elección", "Correos"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -126,6 +126,7 @@ public class PresidenteP extends JPanel {
         
         tablaPresidentes = new JTable(tableModel);
         tablaPresidentes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        tablaPresidentes.getColumnModel().getColumn(7).setPreferredWidth(150);
         tablaPresidentes.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 seleccionarPresidente();
@@ -175,6 +176,7 @@ public class PresidenteP extends JPanel {
                 SwingUtilities.invokeLater(() -> {
                     tableModel.setRowCount(0);
                     for (Presidente presidente : presidentes) {
+                        String correosStr = String.join(", ", presidente.getCorreos());
                         Object[] row = {
                             presidente.getIdPresidente(),
                             presidente.getDpi(),
@@ -184,7 +186,8 @@ public class PresidenteP extends JPanel {
                             presidente.getApellido1() + " " + presidente.getApellido2(),
                             new SimpleDateFormat("dd/MM/yyyy").format(presidente.getFechaNac()),
                             presidente.getMunicipio(),
-                            presidente.getAñoEleccion()
+                            presidente.getAñoEleccion(),
+                            correosStr
                         };
                         tableModel.addRow(row);
                     }

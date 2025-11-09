@@ -122,7 +122,7 @@ public class JugadorP extends JPanel {
         panel.setBorder(BorderFactory.createTitledBorder("Lista de Jugadores"));
         panel.setBackground(Color.WHITE);
         
-        String[] columnNames = {"ID", "Nombre", "Apellidos", "Fecha Nac", "Municipio", "Posición", "Equipo"};
+        String[] columnNames = {"ID", "Nombre", "Apellidos", "Fecha Nac", "Municipio", "Posición", "Equipo", "Correos"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -197,6 +197,7 @@ public class JugadorP extends JPanel {
                 SwingUtilities.invokeLater(() -> {
                     tableModel.setRowCount(0);
                     for (Jugador jugador : jugadores) {
+                        String correosStr = String.join(", ", jugador.getCorreos());
                         Object[] row = {
                             jugador.getIdJugador(),
                             jugador.getNombre1() + " " + 
@@ -206,7 +207,8 @@ public class JugadorP extends JPanel {
                             new SimpleDateFormat("dd/MM/yyyy").format(jugador.getFechaNac()),
                             jugador.getMunicipio(),
                             jugador.getPosicion(),
-                            jugador.getNombreEquipo()
+                            jugador.getNombreEquipo(),
+                            correosStr
                         };
                         tableModel.addRow(row);
                     }
