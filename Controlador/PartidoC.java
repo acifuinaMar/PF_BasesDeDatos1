@@ -12,6 +12,7 @@ package Controlador;
 import Modelo.Conexion;
 import Modelo.Partido;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -145,16 +146,15 @@ public class PartidoC{
 
     public List<Partido> buscarPartidosPorEquipo(String nombreEquipo) {
         List<Partido> partidos = new ArrayList<>();
-        String sql = """
-            SELECT p.*, 
-                   ec.nombre as equipo_casa_nombre,
-                   ef.nombre as equipo_fuera_nombre
-            FROM partido p
-            LEFT JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo
-            LEFT JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo
-            WHERE UPPER(ec.nombre) LIKE UPPER(?) OR UPPER(ef.nombre) LIKE UPPER(?)
-            ORDER BY p.fecha DESC
-            """;
+        String sql = "SELECT p.id_partido, p.fecha, p.goles_casa, p.goles_fuera, " +
+                 "p.id_equipo_casa, p.id_equipo_fuera, " +
+                 "ec.nombre as equipo_casa, " +
+                 "ef.nombre as equipo_fuera " +
+                 "FROM partido p " +
+                 "JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo " +
+                 "JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo " +
+                 "WHERE UPPER(ec.nombre) LIKE UPPER(?) OR UPPER(ef.nombre) LIKE UPPER(?) " +
+                 "ORDER BY p.fecha DESC";
 
         try (Connection conn = Conexion.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -177,16 +177,16 @@ public class PartidoC{
 
     public List<Partido> buscarPartidosPorFecha(Date fecha) {
         List<Partido> partidos = new ArrayList<>();
-        String sql = """
-            SELECT p.*, 
-                   ec.nombre as equipo_casa_nombre,
-                   ef.nombre as equipo_fuera_nombre
-            FROM partido p
-            LEFT JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo
-            LEFT JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo
-            WHERE TRUNC(p.fecha) = TRUNC(?)
-            ORDER BY p.fecha DESC
-            """;
+        
+        String sql = "SELECT p.id_partido, p.fecha, p.goles_casa, p.goles_fuera, " +
+                 "p.id_equipo_casa, p.id_equipo_fuera, " +
+                 "ec.nombre as equipo_casa, " +
+                 "ef.nombre as equipo_fuera " +
+                 "FROM partido p " +
+                 "JOIN equipo ec ON p.id_equipo_casa = ec.id_equipo " +
+                 "JOIN equipo ef ON p.id_equipo_fuera = ef.id_equipo " +
+                 "WHERE TRUNC(p.fecha) = TRUNC(?) " +
+                 "ORDER BY p.fecha DESC";
 
         try (Connection conn = Conexion.getInstance().getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {

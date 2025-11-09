@@ -142,6 +142,7 @@ public class PartidoP extends JPanel {
         });
         
         JScrollPane scrollPane = new JScrollPane(tablaPartidos);
+        panel.add(searchPanel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
         
         return panel;
@@ -154,14 +155,12 @@ public class PartidoP extends JPanel {
         btnAgregar = new JButton("Agregar");
         btnActualizar = new JButton("Actualizar");
         btnEliminar = new JButton("Eliminar");
-        btnBuscar = new JButton("Buscar por Fecha");
         btnLimpiar = new JButton("Limpiar");
         btnVolver = new JButton("Volver al Dashboard");
         
         panel.add(btnAgregar);
         panel.add(btnActualizar);
         panel.add(btnEliminar);
-        panel.add(btnBuscar);
         panel.add(btnLimpiar);
         panel.add(btnVolver);
         
@@ -180,19 +179,6 @@ public class PartidoP extends JPanel {
         ActionListener actualizarResultado = e -> actualizarResultado();
         txtGolesCasa.addActionListener(actualizarResultado);
         txtGolesFuera.addActionListener(actualizarResultado);
-    }
-    
-    private void validarEquiposDiferentes() {
-        if (comboEquipoCasa.getSelectedIndex() > 0 && comboEquipoFuera.getSelectedIndex() > 0) {
-            String equipoCasa = comboEquipoCasa.getSelectedItem().toString();
-            String equipoFuera = comboEquipoFuera.getSelectedItem().toString();
-            
-            if (equipoCasa.equals(equipoFuera)) {
-                JOptionPane.showMessageDialog(this, 
-                    "No puede seleccionar el mismo equipo como local y visitante", 
-                    "Validación", JOptionPane.WARNING_MESSAGE);
-            }
-        }
     }
     
     private void cargarEquipos() {
@@ -250,7 +236,7 @@ public class PartidoP extends JPanel {
     
     private void actualizarTabla(List<Partido> partidos) {
         tableModel.setRowCount(0);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
         
         for (Partido partido : partidos) {
             String resultado = partido.getGolesCasa() + " - " + partido.getGolesFuera();
@@ -358,8 +344,9 @@ public class PartidoP extends JPanel {
                 if (chkBuscarPorFecha.isSelected()) {
                     // Buscar por fecha
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                    Date fecha = sdf.parse(busqueda);
-                    partidos = partidoC.buscarPartidosPorFecha((java.sql.Date) fecha);
+                    java.util.Date fechaUtil = sdf.parse(busqueda);
+                    java.sql.Date fechaSql = new java.sql.Date(fechaUtil.getTime());
+                    partidos = partidoC.buscarPartidosPorFecha(fechaSql);
                 } else {
                     // Buscar por nombre de equipo
                     partidos = partidoC.buscarPartidosPorEquipo(busqueda);
